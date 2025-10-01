@@ -12,9 +12,10 @@ export type Cancha = {
   id: string;
   nombre: string;
   direccion: string;
-  hora: string;
+  fecha: string;
   jugadores: string;
   imagen: any;
+  usuario: string;
 };
 
 type Props = {
@@ -34,8 +35,9 @@ export default function Tarjeta({ cancha }: Props) {
         <View style={styles.infoContainer}>
           <Text style={styles.precio}>Falta(n): {cancha.jugadores}</Text>
           <Text style={styles.nombre}>{cancha.nombre}</Text>
-          <Text style={styles.nombre}>{cancha.hora}</Text>
+          <Text style={styles.nombre}>{cancha.fecha}</Text>
           <Text style={styles.direccion}>{cancha.direccion}</Text>
+          <Text style={styles.direccion}>{cancha.usuario}</Text>
         </View>
       </Pressable>
 
@@ -47,6 +49,7 @@ export default function Tarjeta({ cancha }: Props) {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
+            <Image source={cancha.imagen} style={styles.cardImage} />
             <Text style={styles.modalTitle}>{cancha.nombre}</Text>
             <Text>{cancha.direccion}</Text>
             <Text> Falta(n): {cancha.jugadores}</Text>
@@ -123,6 +126,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 8,
+    paddingTop: 10,
   },
   closeButton: {
     marginTop: 20,

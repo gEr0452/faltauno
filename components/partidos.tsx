@@ -1,10 +1,10 @@
 import React from "react";
 import {
-    Image,
-    Pressable,
-    StyleSheet,
-    Text,
-    View
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View
 } from "react-native";
 
 type Cancha = {
@@ -14,26 +14,9 @@ type Cancha = {
   hora: string;
   jugadores: string;
   imagen: any;
+  usuario: string;
 };
 
-const DATA: Cancha[] = [
-  {
-    id: "1",
-    nombre: "Ciudad (Ex-Muni)",
-    direccion: "Miguel B. Sanchez 1045",
-    jugadores: "2",
-    hora: "18:00",
-    imagen: require("../../assets/images/pelota.jpg"),
-  },
-  {
-    id: "2",
-    nombre: "Grün FC",
-    direccion: "Padre Canavery 1351",
-    jugadores: "1",
-    hora: "18:00",
-    imagen: require("../../assets/images/pelota.jpg"),
-  },
-];
 
 export default function Partidos({ item }: { item: Cancha }){
   return (
@@ -43,6 +26,7 @@ export default function Partidos({ item }: { item: Cancha }){
         <Text style={styles.nombre}>{item.nombre}</Text>
         <Text style={styles.text}>{item.direccion}</Text>
         <Text style={styles.text}>⏰ {item.hora}</Text>
+        <Text style={styles.text}>{item.usuario}</Text>
       </View>
     </Pressable>
   );
@@ -56,8 +40,8 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 12,
     alignItems: "center",
-    elevation: 3, // sombra en Android
-    shadowColor: "#000", // sombra en iOS
+    elevation: 3, 
+    shadowColor: "#000", 
     shadowOpacity: 0.2,
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 2 },
