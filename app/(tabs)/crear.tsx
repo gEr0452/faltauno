@@ -13,7 +13,6 @@ export default function Formulario() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitulo}>FaltaUno</Text>
       </View>
