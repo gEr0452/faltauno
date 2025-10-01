@@ -73,7 +73,6 @@ export default function PerfilUsuario() {
         </Link>
       </View>
 
-      {/* Modal de Preferencias */}
       <Modal visible={modalPref} animationType="slide" transparent>
         <View style={styles.modalFondo}>
           <View style={styles.modalContenido}>
@@ -102,7 +101,6 @@ export default function PerfilUsuario() {
         </View>
       </Modal>
 
-      {/* Modal de Historial */}
       <Modal visible={modalHistorial} animationType="slide" transparent>
         <View style={styles.modalFondo}>
           <View style={styles.modalContenido}>
