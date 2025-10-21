@@ -1,5 +1,6 @@
 import React from "react";
 import { FlatList, StyleSheet, TextInput, View } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Tarjeta, { Cancha } from "../../components/tarjeta";
 
 const DATA: Cancha[] = [
@@ -60,14 +61,14 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: "#2e7d32",
     padding: 20,
-    height: 90,
-    justifyContent: "center",
+    height: 150, // 👈 aumenté de 90 a 150 (podés ajustar)
+    justifyContent: "flex-end", // baja el buscador dentro del área verde
   },
   searchBar: {
     backgroundColor: "#fff",
     borderRadius: 20,
     paddingHorizontal: 15,
-    paddingVertical: 5,
+    paddingVertical: 6,
     fontSize: 14,
   },
 });
