@@ -1,63 +1,68 @@
-import React, { useState } from "react";
-import {
-  FlatList,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View, } from "react-native";
 import Partidos from "../../components/partidos";
+import { API_URL } from "../../config/config";
 
-type Cancha = {
-  id: string;
+type UsuarioInscrito = {
+  id: number;
   nombre: string;
-  direccion: string;
-  hora: string;
-  jugadores: string;
-  imagen: any;
-  usuario: string;
 };
 
-const DATA: Cancha[] = [
-  {
-    id: "1",
-    nombre: "Ciudad (Ex-Muni)",
-    direccion: "Miguel B. Sanchez 1045",
-    jugadores: "2",
-    hora: "18:00",
-    imagen: require("../../assets/images/pelota.png"),
-    usuario: "Usuario",
-  },
-  {
-    id: "2",
-    nombre: "Grün FC",
-    direccion: "Padre Canavery 1351",
-    jugadores: "1",
-    hora: "18:00",
-    imagen: require("../../assets/images/pelota.png"),
-    usuario: "Usuario",
-  },
-  {
-    id: "3",
-    nombre: "Grün FC",
-    direccion: "Padre Canavery 1351",
-    jugadores: "3",
-    hora: "20:00",
-    imagen: require("../../assets/images/pelota.png"),
-    usuario: "Usuario",
-  },
-];
+type Tarjeta = {
+  id: number;
+  nombre: string;
+  direccion: string;
+  jugadores: number;
+  fecha: string;
+  image?: string;
+  usuario: string;
+  inscritos: UsuarioInscrito[];
+};
 
 export default function PartidosTab() {
+  const [tarjetas, setTarjetas] = useState<Tarjeta[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
+  const [usuariosInscritos, setUsuariosInscritos] = useState<UsuarioInscrito[]>([]);
+  const [tarjetaSeleccionada, setTarjetaSeleccionada] = useState<number | null>(null);
 
-  const usuariosInscritos = [
-    { id: "1", nombre: "Ignacio Basara" },
-    { id: "2", nombre: "Gonzalo González" },
-    { id: "3", nombre: "Carlos" },
-  ];
+  useEffect(() => {
+    const fetchTarjetas = async () => {
+      try {
+        const res = await fetch(`${API_URL}/tarjetas`);
+        const data = await res.json();
+        setTarjetas(data);
+      } catch (err) {
+        console.error(err);
+        Alert.alert("Error", "No se pudieron obtener los partidos");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTarjetas();
+  }, []);
+
+  const verInscritos = async (tarjetaId: number) => {
+    try {
+      const res = await fetch(`${API_URL}/tarjetas/${tarjetaId}/inscritos`);
+      const data = await res.json();
+      setUsuariosInscritos(data);
+      setTarjetaSeleccionada(tarjetaId);
+      setModalVisible(true);
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "No se pudieron obtener los usuarios inscritos");
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color="#2e7d32" />
+        <Text>Cargando partidos...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -69,35 +74,27 @@ export default function PartidosTab() {
         />
       </View>
 
-      <Text style={styles.titulo}>Partidos Inscriptos</Text>
-      <FlatList
-        data={DATA}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.item}>
-            <Partidos item={item} />
-            <Pressable style={styles.botonDarBaja}>
-              <Text style={styles.botonTexto}>Dar de Baja</Text>
-            </Pressable>
-          </View>
-        )}
-        contentContainerStyle={styles.lista}
-      />
-
       <Text style={styles.titulo}>Partidos Creados</Text>
       <FlatList
-        data={DATA}
-        keyExtractor={(item) => item.id}
+        data={tarjetas}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <View style={styles.item}>
-            <Partidos item={item} />
+            <Partidos
+              item={{
+                ...item,
+                image: item.image
+                  ? { uri: item.image }
+                  : require("../../assets/images/pelota.png"),
+              }}
+            />
             <View style={styles.botonesRow}>
               <Pressable style={styles.botonDarBaja}>
                 <Text style={styles.botonTexto}>Dar de Baja</Text>
               </Pressable>
               <Pressable
                 style={styles.botonVerInscritos}
-                onPress={() => setModalVisible(true)}
+                onPress={() => verInscritos(item.id)}
               >
                 <Text style={styles.botonTexto}>Ver Inscritos</Text>
               </Pressable>
@@ -107,16 +104,24 @@ export default function PartidosTab() {
         contentContainerStyle={styles.lista}
       />
 
-
+      {/* Modal dinámico */}
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalFondo}>
           <View style={styles.modalContenido}>
-            <Text style={styles.modalTitulo}>Usuarios Inscritos</Text>
-            {usuariosInscritos.map((usuario) => (
-              <Text key={usuario.id} style={styles.usuarioTexto}>
-                {usuario.nombre}
+            <Text style={styles.modalTitulo}>
+              Usuarios Inscritos ({usuariosInscritos.length})
+            </Text>
+            {usuariosInscritos.length > 0 ? (
+              usuariosInscritos.map((usuario) => (
+                <Text key={usuario.id} style={styles.usuarioTexto}>
+                  {usuario.nombre}
+                </Text>
+              ))
+            ) : (
+              <Text style={{ textAlign: "center", color: "#666" }}>
+                No hay usuarios inscritos aún
               </Text>
-            ))}
+            )}
             <Pressable
               style={styles.botonCerrarModal}
               onPress={() => setModalVisible(false)}

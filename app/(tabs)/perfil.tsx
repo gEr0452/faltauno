@@ -1,50 +1,31 @@
 import { Link } from "expo-router";
-import React, { useState } from "react";
-import {
-  FlatList,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import React, { useEffect, useState } from "react";
+import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View, } from "react-native";
 import Partidos from "../../components/partidos";
+import { API_URL } from "../../config/config";
 
-type Cancha = {
-  id: string;
+type Tarjeta = {
+  id: number;
   nombre: string;
   direccion: string;
-  hora: string;
-  jugadores: string;
-  imagen: any;
+  jugadores: number;
+  fecha: string;
+  image?: string;
   usuario: string;
 };
-
-const DATA: Cancha[] = [
-  {
-    id: "1",
-    nombre: "Ciudad (Ex-Muni)",
-    direccion: "Miguel B. Sanchez 1045",
-    jugadores: "2",
-    hora: "Sabado 18:00",
-    imagen: require("../../assets/images/pelota.png"),
-    usuario: "Usuario",
-  },
-  {
-    id: "2",
-    nombre: "Grün FC",
-    direccion: "Padre Canavery 1351",
-    jugadores: "1",
-    hora: "Domingo 18:00",
-    imagen: require("../../assets/images/pelota.png"),
-    usuario: "Usuario",
-  },
-];
 
 export default function PerfilUsuario() {
   const [modalPref, setModalPref] = useState(false);
   const [modalHistorial, setModalHistorial] = useState(false);
+  const [historial, setHistorial] = useState<Tarjeta[]>([]);
+
+
+  useEffect(() => {
+    fetch(`${API_URL}/tarjetas`)
+      .then((res) => res.json())
+      .then(setHistorial)
+      .catch((err) => console.error("Error al cargar historial:", err));
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -107,8 +88,8 @@ export default function PerfilUsuario() {
             <Text style={styles.tituloModal}>Historial de Partidos</Text>
 
             <FlatList
-              data={DATA}
-              keyExtractor={(item) => item.id}
+              data={historial}
+              keyExtractor={(item) => item.id.toString()}
               renderItem={({ item }) => (
                 <View style={styles.item}>
                   <Partidos item={item} /> 
