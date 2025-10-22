@@ -30,18 +30,30 @@ export default function Home() {
     fetchTarjetas();
   }, []);
 
-  const fetchTarjetas = async () => {
-    try {
-      const res = await fetch(`${API_URL}/tarjetas`);
-      const data = await res.json();
-      setTarjetas(data);
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "No se pudieron obtener los partidos");
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchTarjetas = async () => {
+  try {
+    const res = await fetch(`${API_URL}/tarjetas`);
+    const data = await res.json();
+
+    const tarjetasFormateadas = data.map((t: any) => ({
+      id: t.id,
+      nombre: t.partido?.cancha ?? "Sin nombre",
+      direccion: t.partido?.lugar ?? "Sin dirección",
+      jugadores: t.partido?.jugadoresFaltantes ?? 0,
+      fecha: `${t.partido?.dia ?? ""} ${t.partido?.hora ?? ""}`,
+      image: t.imagen,
+      usuario: `Usuario ${t.partido?.usuarioId ?? "?"}`,
+    }));
+
+    setTarjetas(tarjetasFormateadas);
+  } catch (err) {
+    console.error(err);
+    Alert.alert("Error", "No se pudieron obtener los partidos");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
 const filteredTarjetas = tarjetas.filter(tarjeta =>
   (tarjeta.nombre?.toLowerCase() ?? "").includes(searchText.toLowerCase()) ||

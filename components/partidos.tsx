@@ -7,32 +7,44 @@ import {
   View
 } from "react-native";
 
-
 type Tarjeta = {
   id: number;
-  nombre: string;
-  direccion: string;
-  jugadores: number;
-  fecha: string;
-  image?: string;
-  usuario: string;
+  partido?: {
+    cancha?: string;
+    lugar?: string;
+    dia?: string;
+    hora?: string;
+    jugadoresFaltantes?: number;
+    usuarioId?: number;
+  };
+  imagen?: string;
 };
 
 export default function Partidos({ item }: { item: Tarjeta }) {
+  const nombre = item.partido?.cancha ?? "Sin nombre";
+  const direccion = item.partido?.lugar ?? "Sin dirección";
+  const fecha = `${item.partido?.dia ?? ""} ${item.partido?.hora ?? ""}`.trim();
+  const jugadores = item.partido?.jugadoresFaltantes ?? 0;
+  const usuario = `Usuario ${item.partido?.usuarioId ?? "?"}`;
+  const image = item.imagen && typeof item.imagen === "string" ? item.imagen : null;
+
   return (
     <Pressable style={styles.card}>
-      {item.image && (
+      {image ? (
+        <Image source={{ uri: image }} style={styles.image} />
+      ) : (
         <Image
-          source={{ uri: item.image }} 
+          source={require("../assets/images/pelota.png")}
           style={styles.image}
         />
       )}
+
       <View style={styles.info}>
-        <Text style={styles.nombre}>{item.nombre}</Text>
-        <Text style={styles.text}>{item.direccion}</Text>
-        <Text style={styles.text}>📅 {item.fecha}</Text>
-        <Text style={styles.text}>👥 {item.jugadores} jugadores</Text>
-        <Text style={styles.text}>{item.usuario}</Text>
+        <Text style={styles.nombre}>{nombre}</Text>
+        <Text style={styles.text}>{direccion}</Text>
+        <Text style={styles.text}>📅 {fecha}</Text>
+        <Text style={styles.text}>👥 {jugadores} jugadores</Text>
+        <Text style={styles.text}>{usuario}</Text>
       </View>
     </Pressable>
   );

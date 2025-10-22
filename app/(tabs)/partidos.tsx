@@ -83,7 +83,7 @@ export default function PartidosTab() {
             <Partidos
               item={{
                 ...item,
-                image: item.image
+                imagen: item.image
                   ? { uri: item.image }
                   : require("../../assets/images/pelota.png"),
               }}
@@ -104,7 +104,6 @@ export default function PartidosTab() {
         contentContainerStyle={styles.lista}
       />
 
-      {/* Modal dinámico */}
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalFondo}>
           <View style={styles.modalContenido}>
