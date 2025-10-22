@@ -46,7 +46,6 @@ export default function PerfilUsuario() {
   });
   const [loading, setLoading] = useState(true);
 
-  // Cargar datos del usuario
   useEffect(() => {
     cargarDatosUsuario();
   }, []);

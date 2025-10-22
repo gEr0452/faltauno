@@ -1,31 +1,58 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, TextInput, View } from "react-native";
-import Tarjeta, { Cancha } from "../../components/tarjeta";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
+} from "react-native";
+import Tarjeta from "../../components/tarjeta"; // Asegúrate de que la ruta sea correcta
+import { API_URL } from "../../config/config";
 
-export default function HomeScreen() {
-  const [tarjetas, setTarjetas] = useState<Cancha[]>([]);
+type TarjetaType = {
+  id: number;
+  nombre: string;
+  direccion: string;
+  jugadores: number;
+  fecha: string;
+  image?: string;
+  usuario: string;
+};
+
+export default function Home() {
+  const [tarjetas, setTarjetas] = useState<TarjetaType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
-    const fetchTarjetas = async () => {
-      try {
-        const response = await fetch("http://192.168.1.3:3000/tarjetas");
-        const data = await response.json();
-        setTarjetas(data);
-      } catch (error) {
-        console.error("Error al traer tarjetas:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchTarjetas();
   }, []);
 
+  const fetchTarjetas = async () => {
+    try {
+      const res = await fetch(`${API_URL}/tarjetas`);
+      const data = await res.json();
+      setTarjetas(data);
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "No se pudieron obtener los partidos");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+const filteredTarjetas = tarjetas.filter(tarjeta =>
+  (tarjeta.nombre?.toLowerCase() ?? "").includes(searchText.toLowerCase()) ||
+  (tarjeta.direccion?.toLowerCase() ?? "").includes(searchText.toLowerCase())
+);
+
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
         <ActivityIndicator size="large" color="#2e7d32" />
+        <Text>Cargando partidos...</Text>
       </View>
     );
   }
@@ -37,13 +64,21 @@ export default function HomeScreen() {
           placeholder="Buscar partidos..."
           placeholderTextColor="#666"
           style={styles.searchBar}
+          value={searchText}
+          onChangeText={setSearchText}
         />
       </View>
+
       <FlatList
-        data={tarjetas}
+        data={filteredTarjetas}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => <Tarjeta cancha={item} />}
-        contentContainerStyle={{ padding: 16 }}
+        renderItem={({ item }) => <Tarjeta item={item} />}
+        contentContainerStyle={styles.lista}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>
+            {searchText ? "No se encontraron partidos" : "No hay partidos disponibles"}
+          </Text>
+        }
       />
     </View>
   );
@@ -57,14 +92,25 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: "#2e7d32",
     padding: 20,
-    height: 150, 
-    justifyContent: "flex-end", 
+    height: 150,
+    justifyContent: "flex-end",
   },
   searchBar: {
     backgroundColor: "#fff",
     borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 6,
+    paddingHorizontal: 17,
+    paddingVertical: 5,
     fontSize: 14,
+  },
+  lista: {
+    paddingHorizontal: 10,
+    paddingBottom: 20,
+    paddingTop: 10,
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#666",
+    marginTop: 50,
+    fontSize: 16,
   },
 });

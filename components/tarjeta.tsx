@@ -8,21 +8,21 @@ import {
   View,
 } from "react-native";
 
-export type Cancha = {
-  id: string;
+export type TarjetaType = {
+  id: number;
   nombre: string;
   direccion: string;
+  jugadores: number;
   fecha: string;
-  jugadores: string;
-  imagen: any;
+  image?: string;
   usuario: string;
 };
 
 type Props = {
-  cancha: Cancha;
+  item: TarjetaType;
 };
 
-export default function Tarjeta({ cancha }: Props) {
+export default function Tarjeta({ item }: Props) {
   const [modalVisible, setModalVisible] = useState(false);
 
   return (
@@ -31,13 +31,19 @@ export default function Tarjeta({ cancha }: Props) {
         style={styles.card}
         onPress={() => setModalVisible(true)}
       >
-        <Image source={cancha.imagen} style={styles.cardImage} />
+        <Image 
+          source={item.image 
+            ? { uri: item.image } 
+            : require("../assets/images/arco.jpg")
+          } 
+          style={styles.cardImage} 
+        />
         <View style={styles.infoContainer}>
-          <Text style={styles.precio}>Falta(n): {cancha.jugadores}</Text>
-          <Text style={styles.nombre}>{cancha.nombre}</Text>
-          <Text style={styles.nombre}>{cancha.fecha}</Text>
-          <Text style={styles.direccion}>{cancha.direccion}</Text>
-          <Text style={styles.direccion}>{cancha.usuario}</Text>
+          <Text style={styles.precio}>Falta(n): {item.jugadores}</Text>
+          <Text style={styles.nombre}>{item.nombre}</Text>
+          <Text style={styles.nombre}>{item.fecha}</Text>
+          <Text style={styles.direccion}>{item.direccion}</Text>
+          <Text style={styles.direccion}>Creado por: {item.usuario}</Text>
         </View>
       </Pressable>
 
@@ -49,10 +55,18 @@ export default function Tarjeta({ cancha }: Props) {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Image source={cancha.imagen} style={styles.cardImage} />
-            <Text style={styles.modalTitle}>{cancha.nombre}</Text>
-            <Text>{cancha.direccion}</Text>
-            <Text> Falta(n): {cancha.jugadores}</Text>
+            <Image 
+              source={item.image 
+                ? { uri: item.image } 
+                : require("../assets/images/arco.jpg")
+              } 
+              style={styles.cardImage} 
+            />
+            <Text style={styles.modalTitle}>{item.nombre}</Text>
+            <Text>{item.direccion}</Text>
+            <Text>Falta(n): {item.jugadores}</Text>
+            <Text>Fecha: {item.fecha}</Text>
+            <Text>Creado por: {item.usuario}</Text>
 
             <Pressable
               style={styles.closeButton}
@@ -62,7 +76,7 @@ export default function Tarjeta({ cancha }: Props) {
             </Pressable>
 
             <Pressable
-              style={styles.closeButton}
+              style={[styles.closeButton, { backgroundColor: "#c62828", marginTop: 10 }]}
               onPress={() => setModalVisible(false)}
             >
               <Text style={{ color: "#fff", fontWeight: "bold" }}>Cerrar</Text>
