@@ -28,7 +28,7 @@ export default function LoginScreen() {
         value={password}
         onChangeText={setPassword}
       />
-        <Link href="/home" asChild>
+        <Link href="/home" replace asChild>
             <Pressable style={styles.loginButton}>
                 <Text style={styles.loginButtonText}>Ingresar</Text>
             </Pressable>

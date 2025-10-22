@@ -47,7 +47,7 @@ export default function PerfilUsuario() {
           <Text style={styles.botonTexto}>Historial de Partidos</Text>
         </Pressable>
 
-        <Link href="/login" asChild>
+        <Link href="/login" replace asChild>
           <Pressable style={styles.botonCerrar}>
             <Text style={styles.botonTexto}>Cerrar Sesión</Text>
           </Pressable>
