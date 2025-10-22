@@ -6,9 +6,9 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View
+  View,
 } from "react-native";
-import Tarjeta from "../../components/tarjeta"; // Asegúrate de que la ruta sea correcta
+import Tarjeta from "../../components/tarjeta";
 import { API_URL } from "../../config/config";
 
 type TarjetaType = {
@@ -35,14 +35,17 @@ const fetchTarjetas = async () => {
     const res = await fetch(`${API_URL}/tarjetas`);
     const data = await res.json();
 
-    const tarjetasFormateadas = data.map((t: any) => ({
-      id: t.id,
-      nombre: t.partido?.cancha ?? "Sin nombre",
-      direccion: t.partido?.lugar ?? "Sin dirección",
-      jugadores: t.partido?.jugadoresFaltantes ?? 0,
-      fecha: `${t.partido?.dia ?? ""} ${t.partido?.hora ?? ""}`,
-      image: t.imagen,
-      usuario: `Usuario ${t.partido?.usuarioId ?? "?"}`,
+    // Debug para ver qué llega
+    console.log("Ejemplo /tarjetas:", data?.[0]);
+
+    const tarjetasFormateadas = (Array.isArray(data) ? data : []).map((t: any) => ({
+      id: Number(t.id),
+      nombre: t.nombre ?? "Sin nombre",          // <- ahora lee plano
+      direccion: t.direccion ?? "Sin dirección", // <- ahora lee plano
+      jugadores: Number(t.jugadores) || 0,       // <- ahora lee plano
+      fecha: t.fecha || "Sin fecha",             // <- ahora lee plano
+      image: t.image ?? null,                    // <- ahora lee plano
+      usuario: t.usuario ?? "",                  // <- ahora lee plano
     }));
 
     setTarjetas(tarjetasFormateadas);
@@ -54,15 +57,20 @@ const fetchTarjetas = async () => {
   }
 };
 
-
-const filteredTarjetas = tarjetas.filter(tarjeta =>
-  (tarjeta.nombre?.toLowerCase() ?? "").includes(searchText.toLowerCase()) ||
-  (tarjeta.direccion?.toLowerCase() ?? "").includes(searchText.toLowerCase())
-);
+  const filteredTarjetas = tarjetas.filter(
+    (tarjeta) =>
+      (tarjeta.nombre?.toLowerCase() ?? "").includes(searchText.toLowerCase()) ||
+      (tarjeta.direccion?.toLowerCase() ?? "").includes(searchText.toLowerCase())
+  );
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
         <ActivityIndicator size="large" color="#2e7d32" />
         <Text>Cargando partidos...</Text>
       </View>
@@ -88,7 +96,9 @@ const filteredTarjetas = tarjetas.filter(tarjeta =>
         contentContainerStyle={styles.lista}
         ListEmptyComponent={
           <Text style={styles.emptyText}>
-            {searchText ? "No se encontraron partidos" : "No hay partidos disponibles"}
+            {searchText
+              ? "No se encontraron partidos"
+              : "No hay partidos disponibles"}
           </Text>
         }
       />
