@@ -57,8 +57,8 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: "#2e7d32",
     padding: 20,
-    height: 150, // 👈 aumenté de 90 a 150 (podés ajustar)
-    justifyContent: "flex-end", // baja el buscador dentro del área verde
+    height: 150, 
+    justifyContent: "flex-end", 
   },
   searchBar: {
     backgroundColor: "#fff",
