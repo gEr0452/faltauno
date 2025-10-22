@@ -7,30 +7,36 @@ import {
   View
 } from "react-native";
 
-type Cancha = {
-  id: string;
+
+type Tarjeta = {
+  id: number;
   nombre: string;
   direccion: string;
-  hora: string;
-  jugadores: string;
-  imagen: any;
+  jugadores: number;
+  fecha: string;
+  image?: string;
   usuario: string;
 };
 
-
-export default function Partidos({ item }: { item: Cancha }){
+export default function Partidos({ item }: { item: Tarjeta }) {
   return (
     <Pressable style={styles.card}>
-      <Image source={item.imagen} style={styles.image} />
+      {item.image && (
+        <Image
+          source={{ uri: item.image }} 
+          style={styles.image}
+        />
+      )}
       <View style={styles.info}>
         <Text style={styles.nombre}>{item.nombre}</Text>
         <Text style={styles.text}>{item.direccion}</Text>
-        <Text style={styles.text}>⏰ {item.hora}</Text>
+        <Text style={styles.text}>📅 {item.fecha}</Text>
+        <Text style={styles.text}>👥 {item.jugadores} jugadores</Text>
         <Text style={styles.text}>{item.usuario}</Text>
       </View>
     </Pressable>
   );
-};
+}
 
 const styles = StyleSheet.create({
   card: {
@@ -40,8 +46,8 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 12,
     alignItems: "center",
-    elevation: 3, 
-    shadowColor: "#000", 
+    elevation: 3,
+    shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 2 },
