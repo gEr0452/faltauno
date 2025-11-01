@@ -32,17 +32,17 @@ export default function Home() {
 
 const fetchTarjetas = async () => {
   try {
-    const res = await fetch(`${API_URL}/partidos`);
+    const res = await fetch(`${API_URL}/tarjetas`);
     const data = await res.json();
 
     const tarjetasFormateadas = data.map((t: any) => ({
       id: t.id,
-      nombre: t.cancha ?? "Sin nombre",
-      direccion: t.lugar ?? "Sin dirección",
-      jugadores: t.jugadoresFaltantes ?? 0,
-      fecha: `${t.dia ?? ""} ${t.hora ?? ""}`,
+      nombre: t.partido?.cancha ?? "Sin nombre",
+      direccion: t.partido?.lugar ?? "Sin dirección",
+      jugadores: t.partido?.jugadoresFaltantes ?? 0,
+      fecha: `${t.partido?.dia ?? ""} ${t.partido?.hora ?? ""}`,
       image: t.imagen,
-      usuario: `Usuario ${t.usuarioId ?? "?"}`,
+      usuario: `Usuario ${t.partido?.usuarioId ?? "?"}`,
     }));
 
     setTarjetas(tarjetasFormateadas);
@@ -110,8 +110,8 @@ const styles = StyleSheet.create({
   searchBar: {
     backgroundColor: "#fff",
     borderRadius: 20,
-    paddingHorizontal: 17,
-    paddingVertical: 5,
+    paddingHorizontal: 15,
+    paddingVertical: 6,
     fontSize: 14,
   },
   lista: {
