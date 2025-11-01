@@ -9,23 +9,21 @@ import {
 
 type Tarjeta = {
   id: number;
-  partido?: {
-    cancha?: string;
-    lugar?: string;
-    dia?: string;
-    hora?: string;
-    jugadoresFaltantes?: number;
-    usuarioId?: number;
-  };
+  cancha?: string;
+  lugar?: string;
+  dia?: string;
+  hora?: string;
+  jugadoresFaltantes?: number;
+  usuarioId?: number;
   imagen?: string;
 };
 
 export default function Partidos({ item }: { item: Tarjeta }) {
-  const nombre = item.partido?.cancha ?? "Sin nombre";
-  const direccion = item.partido?.lugar ?? "Sin dirección";
-  const fecha = `${item.partido?.dia ?? ""} ${item.partido?.hora ?? ""}`.trim();
-  const jugadores = item.partido?.jugadoresFaltantes ?? 0;
-  const usuario = `Usuario ${item.partido?.usuarioId ?? "?"}`;
+  const nombre = item.cancha ?? "Sin nombre";
+  const direccion = item.lugar ?? "Sin dirección";
+  const fecha = `${item.dia ?? ""} ${item.hora ?? ""}`.trim();
+  const jugadores = item.jugadoresFaltantes ?? 0;
+  const usuario = `Usuario ${item.usuarioId ?? "?"}`;
   const image = item.imagen && typeof item.imagen === "string" ? item.imagen : null;
 
   return (

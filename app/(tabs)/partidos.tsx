@@ -29,7 +29,7 @@ export default function PartidosTab() {
   useEffect(() => {
     const fetchTarjetas = async () => {
       try {
-        const res = await fetch(`${API_URL}/tarjetas`);
+        const res = await fetch(`${API_URL}/partidos`);
         const data = await res.json();
         setTarjetas(data);
       } catch (err) {
