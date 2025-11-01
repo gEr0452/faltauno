@@ -32,17 +32,17 @@ export default function Home() {
 
 const fetchTarjetas = async () => {
   try {
-    const res = await fetch(`${API_URL}/tarjetas`);
+    const res = await fetch(`${API_URL}/partidos`);
     const data = await res.json();
 
     const tarjetasFormateadas = data.map((t: any) => ({
       id: t.id,
-      nombre: t.partido?.cancha ?? "Sin nombre",
-      direccion: t.partido?.lugar ?? "Sin dirección",
-      jugadores: t.partido?.jugadoresFaltantes ?? 0,
-      fecha: `${t.partido?.dia ?? ""} ${t.partido?.hora ?? ""}`,
+      nombre: t.cancha ?? "Sin nombre",
+      direccion: t.lugar ?? "Sin dirección",
+      jugadores: t.jugadoresFaltantes ?? 0,
+      fecha: `${t.dia ?? ""} ${t.partido?.hora ?? ""}`,
       image: t.imagen,
-      usuario: `Usuario ${t.partido?.usuarioId ?? "?"}`,
+      usuario: `Usuario ${t.usuarioId ?? "?"}`,
     }));
 
     setTarjetas(tarjetasFormateadas);
