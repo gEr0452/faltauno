@@ -24,24 +24,25 @@ export default function Partidos({ item }: { item: Tarjeta }) {
   const fecha = `${item.dia ?? ""} ${item.hora ?? ""}`.trim();
   const jugadores = item.jugadoresFaltantes ?? 0;
   const usuario = `Usuario ${item.usuarioId ?? "?"}`;
-  const image = item.imagen && typeof item.imagen === "string" ? item.imagen : null;
+  // image puede venir como string (url), como objeto { uri } o como fuente require();
+  let imageSource: any = require("../assets/images/pelota.png");
+  if (item.imagen) {
+    if (typeof item.imagen === "string") {
+      imageSource = { uri: item.imagen };
+    } else if (typeof item.imagen === "object" && (item.imagen as any).uri) {
+      imageSource = item.imagen;
+    }
+  }
 
   return (
     <Pressable style={styles.card}>
-      {image ? (
-        <Image source={{ uri: image }} style={styles.image} />
-      ) : (
-        <Image
-          source={require("../assets/images/pelota.png")}
-          style={styles.image}
-        />
-      )}
+      <Image source={imageSource} style={styles.image} />
 
       <View style={styles.info}>
         <Text style={styles.nombre}>{nombre}</Text>
         <Text style={styles.text}>{direccion}</Text>
         <Text style={styles.text}>📅 {fecha}</Text>
-        <Text style={styles.text}>👥 {jugadores} jugadores</Text>
+  <Text style={styles.text}>{jugadores > 0 ? `👥 ${jugadores} jugadores` : "COMPLETADO"}</Text>
         <Text style={styles.text}>{usuario}</Text>
       </View>
     </Pressable>

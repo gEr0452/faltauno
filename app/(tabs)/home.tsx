@@ -32,25 +32,37 @@ export default function Home() {
 
 const fetchTarjetas = async () => {
   try {
-    const res = await fetch(`${API_URL}/partidos`);
+    // Obtener tarjetas (include usuarios inscritos y jugadores faltantes)
+    const res = await fetch(`${API_URL}/tarjetas`);
     const data = await res.json();
 
-    const tarjetasFormateadas = data.map((t: any) => ({
-      id: t.id,
-      nombre: t.cancha ?? "Sin nombre",
-      direccion: t.lugar ?? "Sin dirección",
-      jugadores: t.jugadoresFaltantes ?? 0,
-      fecha: `${t.dia ?? ""} ${t.partido?.hora ?? ""}`,
-      image: t.imagen,
-      usuario: `Usuario ${t.usuarioId ?? "?"}`,
-    }));
-
-    setTarjetas(tarjetasFormateadas);
+    // Las tarjetas vienen ya formateadas desde el backend
+    setTarjetas(data);
   } catch (err) {
     console.error(err);
     Alert.alert("Error", "No se pudieron obtener los partidos");
   } finally {
     setLoading(false);
+  }
+};
+
+const inscribirse = async (tarjetaId: number) => {
+  try {
+    // TODO: usar el usuario autenticado en vez de id 1
+    const res = await fetch(`${API_URL}/tarjetas/${tarjetaId}/inscribir`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuarioId: 1 }),
+    });
+
+    if (!res.ok) throw new Error("Error al inscribir");
+
+    // refrescar tarjetas
+    await fetchTarjetas();
+    Alert.alert("¡Listo!", "Te has inscrito al partido.");
+  } catch (err) {
+    console.error(err);
+    Alert.alert("Error", "No se pudo inscribir al usuario");
   }
 };
 
@@ -84,7 +96,9 @@ const filteredTarjetas = tarjetas.filter(tarjeta =>
       <FlatList
         data={filteredTarjetas}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => <Tarjeta item={item} />}
+        renderItem={({ item }) => (
+          <Tarjeta item={item} onInscribirse={inscribirse} />
+        )}
         contentContainerStyle={styles.lista}
         ListEmptyComponent={
           <Text style={styles.emptyText}>

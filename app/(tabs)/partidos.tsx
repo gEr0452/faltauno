@@ -10,13 +10,14 @@ type UsuarioInscrito = {
 
 type Tarjeta = {
   id: number;
-  nombre: string;
-  direccion: string;
-  jugadores: number;
-  fecha: string;
-  image?: string;
-  usuario: string;
-  inscritos: UsuarioInscrito[];
+  cancha?: string;
+  lugar?: string;
+  dia?: string;
+  hora?: string;
+  jugadoresFaltantes?: number;
+  usuarioId?: number;
+  imagen?: string | { uri: string } | null;
+  inscritos?: UsuarioInscrito[];
 };
 
 export default function PartidosTab() {
@@ -27,11 +28,25 @@ export default function PartidosTab() {
   const [tarjetaSeleccionada, setTarjetaSeleccionada] = useState<number | null>(null);
 
   useEffect(() => {
-    const fetchTarjetas = async () => {
+    const fetchPartidos = async () => {
       try {
+        // Obtener partidos creados por el usuario (endpoint /partidos)
         const res = await fetch(`${API_URL}/partidos`);
         const data = await res.json();
-        setTarjetas(data);
+
+        // Mapear al shape que espera el componente Partidos
+        const mapped = data.map((p: any) => ({
+          id: p.id,
+          cancha: p.cancha,
+          lugar: p.lugar,
+          dia: p.dia,
+          hora: p.hora,
+          jugadoresFaltantes: p.jugadoresFaltantes,
+          usuarioId: p.usuarioId,
+          imagen: null,
+        }));
+
+        setTarjetas(mapped);
       } catch (err) {
         console.error(err);
         Alert.alert("Error", "No se pudieron obtener los partidos");
@@ -39,15 +54,26 @@ export default function PartidosTab() {
         setLoading(false);
       }
     };
-    fetchTarjetas();
+    fetchPartidos();
   }, []);
 
-  const verInscritos = async (tarjetaId: number) => {
+  // Nota: la inscripción se realiza en la pantalla Home (partidos de otros usuarios)
+
+  const verInscritos = async (partidoId: number) => {
     try {
-      const res = await fetch(`${API_URL}/tarjetas/${tarjetaId}/inscritos`);
+      // Buscar la tarjeta asociada al partido para obtener su id
+      const resTarjetas = await fetch(`${API_URL}/tarjetas`);
+      const tarjetasData: any[] = await resTarjetas.json();
+      const found = tarjetasData.find((t) => t.partidoId === partidoId || t.id === partidoId);
+      if (!found) {
+        Alert.alert("Info", "No hay tarjeta asociada a este partido");
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/tarjetas/${found.id}/inscritos`);
       const data = await res.json();
       setUsuariosInscritos(data);
-      setTarjetaSeleccionada(tarjetaId);
+      setTarjetaSeleccionada(found.id);
       setModalVisible(true);
     } catch (err) {
       console.error(err);
@@ -82,16 +108,21 @@ export default function PartidosTab() {
           <View style={styles.item}>
             <Partidos
               item={{
-                ...item,
-                imagen: item.image
-                  ? { uri: item.image }
-                  : require("../../assets/images/pelota.png"),
+                id: item.id,
+                cancha: item.cancha,
+                lugar: item.lugar,
+                dia: item.dia,
+                hora: item.hora,
+                jugadoresFaltantes: item.jugadoresFaltantes,
+                usuarioId: item.usuarioId,
+                imagen: item.imagen ? { uri: item.imagen } : require("../../assets/images/pelota.png"),
               }}
             />
             <View style={styles.botonesRow}>
               <Pressable style={styles.botonDarBaja}>
                 <Text style={styles.botonTexto}>Dar de Baja</Text>
               </Pressable>
+              {/* Inscribirse aquí no aplica; la inscripción se hace desde Home */}
               <Pressable
                 style={styles.botonVerInscritos}
                 onPress={() => verInscritos(item.id)}

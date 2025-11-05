@@ -20,9 +20,10 @@ export type TarjetaType = {
 
 type Props = {
   item: TarjetaType;
+  onInscribirse?: (tarjetaId: number) => Promise<void> | void;
 };
 
-export default function Tarjeta({ item }: Props) {
+export default function Tarjeta({ item, onInscribirse }: Props) {
   const [modalVisible, setModalVisible] = useState(false);
 
   return (
@@ -39,7 +40,7 @@ export default function Tarjeta({ item }: Props) {
           style={styles.cardImage} 
         />
         <View style={styles.infoContainer}>
-          <Text style={styles.precio}>Falta(n): {item.jugadores}</Text>
+          <Text style={styles.precio}>{item.jugadores > 0 ? `Falta(n): ${item.jugadores}` : "COMPLETADO"}</Text>
           <Text style={styles.nombre}>{item.nombre}</Text>
           <Text style={styles.nombre}>{item.fecha}</Text>
           <Text style={styles.direccion}>{item.direccion}</Text>
@@ -64,16 +65,27 @@ export default function Tarjeta({ item }: Props) {
             />
             <Text style={styles.modalTitle}>{item.nombre}</Text>
             <Text>{item.direccion}</Text>
-            <Text>Falta(n): {item.jugadores}</Text>
+            <Text>{item.jugadores > 0 ? `Falta(n): ${item.jugadores}` : "COMPLETADO"}</Text>
             <Text>Fecha: {item.fecha}</Text>
             <Text>Creado por: {item.usuario}</Text>
 
-            <Pressable
-              style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={{ color: "#fff", fontWeight: "bold" }}>Inscribirse</Text>
-            </Pressable>
+            {item.jugadores > 0 ? (
+              <Pressable
+                style={styles.closeButton}
+                onPress={async () => {
+                  if (onInscribirse) {
+                    await onInscribirse(item.id);
+                  }
+                  setModalVisible(false);
+                }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "bold" }}>Inscribirse</Text>
+              </Pressable>
+            ) : (
+              <View style={styles.disabledButton}>
+                <Text style={{ color: "#fff", fontWeight: "bold" }}>COMPLETADO</Text>
+              </View>
+            )}
 
             <Pressable
               style={[styles.closeButton, { backgroundColor: "#c62828", marginTop: 10 }]}
@@ -148,5 +160,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: "#2e7d32",
     borderRadius: 8,
+  },
+  disabledButton: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: "#9e9e9e",
+    borderRadius: 8,
+    alignItems: "center",
   },
 });
