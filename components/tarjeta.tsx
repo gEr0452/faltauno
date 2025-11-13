@@ -16,15 +16,20 @@ export type TarjetaType = {
   fecha: string;
   image?: string;
   usuario: string;
+  inscritos?: { id: number; nombre: string }[];
 };
 
 type Props = {
   item: TarjetaType;
   onInscribirse?: (tarjetaId: number) => Promise<void> | void;
+  onDarseDeBaja?: (tarjetaId: number) => Promise<void> | void;
+  currentUserId?: number;
 };
 
-export default function Tarjeta({ item, onInscribirse }: Props) {
+export default function Tarjeta({ item, onInscribirse, onDarseDeBaja, currentUserId }: Props) {
   const [modalVisible, setModalVisible] = useState(false);
+  const estaInscrito = currentUserId != null && item.inscritos?.some((usuario) => usuario.id === currentUserId);
+  const hayCupo = item.jugadores > 0;
 
   return (
     <View>
@@ -41,6 +46,7 @@ export default function Tarjeta({ item, onInscribirse }: Props) {
         />
         <View style={styles.infoContainer}>
           <Text style={styles.precio}>{item.jugadores > 0 ? `Falta(n): ${item.jugadores}` : "COMPLETADO"}</Text>
+          {estaInscrito && <Text style={styles.inscripto}>Ya estás inscripto</Text>}
           <Text style={styles.nombre}>{item.nombre}</Text>
           <Text style={styles.nombre}>{item.fecha}</Text>
           <Text style={styles.direccion}>{item.direccion}</Text>
@@ -68,8 +74,21 @@ export default function Tarjeta({ item, onInscribirse }: Props) {
             <Text>{item.jugadores > 0 ? `Falta(n): ${item.jugadores}` : "COMPLETADO"}</Text>
             <Text>Fecha: {item.fecha}</Text>
             <Text>Creado por: {item.usuario}</Text>
+            {estaInscrito && <Text style={styles.inscriptoModal}>Ya estás inscripto a este partido</Text>}
 
-            {item.jugadores > 0 ? (
+            {estaInscrito ? (
+              <Pressable
+                style={[styles.closeButton, { backgroundColor: "#c62828" }]}
+                onPress={async () => {
+                  if (onDarseDeBaja) {
+                    await onDarseDeBaja(item.id);
+                  }
+                  setModalVisible(false);
+                }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "bold" }}>Darse de baja</Text>
+              </Pressable>
+            ) : hayCupo ? (
               <Pressable
                 style={styles.closeButton}
                 onPress={async () => {
@@ -135,6 +154,12 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 2,
   },
+  inscripto: {
+    fontSize: 14,
+    color: "#2e7d32",
+    marginTop: 4,
+    fontWeight: "600",
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -168,5 +193,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#9e9e9e",
     borderRadius: 8,
     alignItems: "center",
+  },
+  inscriptoModal: {
+    marginTop: 12,
+    fontSize: 14,
+    color: "#2e7d32",
+    fontWeight: "600",
   },
 });

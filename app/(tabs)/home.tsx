@@ -11,6 +11,11 @@ import {
 import Tarjeta from "../../components/tarjeta"; // Asegúrate de que la ruta sea correcta
 import { API_URL } from "../../config/config";
 
+type UsuarioInscrito = {
+  id: number;
+  nombre: string;
+};
+
 type TarjetaType = {
   id: number;
   nombre: string;
@@ -19,12 +24,14 @@ type TarjetaType = {
   fecha: string;
   image?: string;
   usuario: string;
+  inscritos?: UsuarioInscrito[];
 };
 
 export default function Home() {
   const [tarjetas, setTarjetas] = useState<TarjetaType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
+  const CURRENT_USER_ID = 1; // TODO: reemplazar con usuario autenticado
 
   useEffect(() => {
     fetchTarjetas();
@@ -52,17 +59,45 @@ const inscribirse = async (tarjetaId: number) => {
     const res = await fetch(`${API_URL}/tarjetas/${tarjetaId}/inscribir`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ usuarioId: 1 }),
+      body: JSON.stringify({ usuarioId: CURRENT_USER_ID }),
     });
 
-    if (!res.ok) throw new Error("Error al inscribir");
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      throw new Error(data?.error ?? "Error al inscribirse al partido");
+    }
 
     // refrescar tarjetas
     await fetchTarjetas();
     Alert.alert("¡Listo!", "Te has inscrito al partido.");
   } catch (err) {
     console.error(err);
-    Alert.alert("Error", "No se pudo inscribir al usuario");
+    const mensaje = err instanceof Error ? err.message : "No se pudo inscribir al usuario";
+    Alert.alert("Error", mensaje);
+  }
+};
+
+const darseDeBaja = async (tarjetaId: number) => {
+  try {
+    const res = await fetch(`${API_URL}/tarjetas/${tarjetaId}/desinscribir`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuarioId: CURRENT_USER_ID }),
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      throw new Error(data?.error ?? "Error al darse de baja del partido");
+    }
+
+    await fetchTarjetas();
+    Alert.alert("Listo", "Te diste de baja del partido.");
+  } catch (err) {
+    console.error(err);
+    const mensaje = err instanceof Error ? err.message : "No se pudo dar de baja al usuario";
+    Alert.alert("Error", mensaje);
   }
 };
 
@@ -97,7 +132,12 @@ const filteredTarjetas = tarjetas.filter(tarjeta =>
         data={filteredTarjetas}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <Tarjeta item={item} onInscribirse={inscribirse} />
+          <Tarjeta
+            item={item}
+            onInscribirse={inscribirse}
+            onDarseDeBaja={darseDeBaja}
+            currentUserId={CURRENT_USER_ID}
+          />
         )}
         contentContainerStyle={styles.lista}
         ListEmptyComponent={
