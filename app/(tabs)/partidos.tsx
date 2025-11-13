@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View, } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Alert, FlatList, Modal, Pressable, RefreshControl, StyleSheet, Text, TextInput, View, } from "react-native";
+import { useFocusEffect } from "expo-router";
 import Partidos from "../../components/partidos";
 import { API_URL } from "../../config/config";
 
@@ -10,6 +11,7 @@ type UsuarioInscrito = {
 
 type Tarjeta = {
   id: number;
+  tarjetaId?: number | null;
   cancha?: string;
   lugar?: string;
   dia?: string;
@@ -23,63 +25,171 @@ type Tarjeta = {
 export default function PartidosTab() {
   const [tarjetas, setTarjetas] = useState<Tarjeta[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [usuariosInscritos, setUsuariosInscritos] = useState<UsuarioInscrito[]>([]);
   const [tarjetaSeleccionada, setTarjetaSeleccionada] = useState<number | null>(null);
+  const [procesandoUsuarioId, setProcesandoUsuarioId] = useState<number | null>(null);
+  const [searchText, setSearchText] = useState("");
 
-  useEffect(() => {
-    const fetchPartidos = async () => {
-      try {
-        // Obtener partidos creados por el usuario (endpoint /partidos)
-        const res = await fetch(`${API_URL}/partidos`);
-        const data = await res.json();
+  const fetchPartidos = useCallback(async (mostrarLoader = false) => {
+    try {
+      if (mostrarLoader) {
+        setLoading(true);
+      }
 
-        // Mapear al shape que espera el componente Partidos
-        const mapped = data.map((p: any) => ({
-          id: p.id,
-          cancha: p.cancha,
-          lugar: p.lugar,
-          dia: p.dia,
-          hora: p.hora,
-          jugadoresFaltantes: p.jugadoresFaltantes,
-          usuarioId: p.usuarioId,
-          imagen: null,
-        }));
+      const res = await fetch(`${API_URL}/partidos`);
+      if (!res.ok) {
+        throw new Error("No se pudieron obtener los partidos");
+      }
 
-        setTarjetas(mapped);
-      } catch (err) {
-        console.error(err);
-        Alert.alert("Error", "No se pudieron obtener los partidos");
-      } finally {
+      const data = await res.json();
+
+      const mapped = data.map((p: any) => ({
+        id: p.id,
+        tarjetaId: p.tarjeta?.id ?? null,
+        cancha: p.cancha,
+        lugar: p.lugar,
+        dia: p.dia,
+        hora: p.hora,
+        jugadoresFaltantes: p.jugadoresFaltantes,
+        usuarioId: p.usuarioId,
+        imagen: null,
+        inscritos: (p.tarjeta?.usuarios ?? []).map((usuario: any) => ({
+          id: usuario.id,
+          nombre: usuario.nombre,
+        })),
+      }));
+
+      setTarjetas(mapped);
+    } catch (err) {
+      console.error(err);
+      const mensaje = err instanceof Error ? err.message : "Error al obtener los partidos";
+      Alert.alert("Error", mensaje);
+    } finally {
+      if (mostrarLoader) {
         setLoading(false);
       }
-    };
-    fetchPartidos();
+      setRefreshing(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchPartidos(true);
+  }, [fetchPartidos]);
+
+  // Recargar datos cuando vuelves a esta pantalla
+  useFocusEffect(
+    useCallback(() => {
+      fetchPartidos(false);
+    }, [fetchPartidos])
+  );
+
+  // Función para pull-to-refresh
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchPartidos(false);
+  }, [fetchPartidos]);
 
   // Nota: la inscripción se realiza en la pantalla Home (partidos de otros usuarios)
 
-  const verInscritos = async (partidoId: number) => {
+  const verInscritos = async (tarjetaInfo: Tarjeta) => {
     try {
-      // Buscar la tarjeta asociada al partido para obtener su id
-      const resTarjetas = await fetch(`${API_URL}/tarjetas`);
-      const tarjetasData: any[] = await resTarjetas.json();
-      const found = tarjetasData.find((t) => t.partidoId === partidoId || t.id === partidoId);
-      if (!found) {
-        Alert.alert("Info", "No hay tarjeta asociada a este partido");
+      if (!tarjetaInfo.tarjetaId) {
+        Alert.alert("Info", "No se encontró la tarjeta asociada a este partido");
         return;
       }
 
-      const res = await fetch(`${API_URL}/tarjetas/${found.id}/inscritos`);
+      const res = await fetch(`${API_URL}/tarjetas/${tarjetaInfo.tarjetaId}/inscritos`);
+      if (!res.ok) {
+        throw new Error("No se pudieron obtener los usuarios inscritos");
+      }
+
       const data = await res.json();
       setUsuariosInscritos(data);
-      setTarjetaSeleccionada(found.id);
+      setTarjetaSeleccionada(tarjetaInfo.tarjetaId);
       setModalVisible(true);
     } catch (err) {
       console.error(err);
-      Alert.alert("Error", "No se pudieron obtener los usuarios inscritos");
+      const mensaje = err instanceof Error ? err.message : "No se pudieron obtener los usuarios inscritos";
+      Alert.alert("Error", mensaje);
     }
   };
+
+  const eliminarPartido = async (partidoId: number) => {
+    Alert.alert(
+      "Confirmar eliminación",
+      "¿Estás seguro de que deseas eliminar este partido? Esta acción no se puede deshacer.",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const res = await fetch(`${API_URL}/partidos/${partidoId}`, {
+                method: "DELETE",
+              });
+
+              const data = await res.json().catch(() => null);
+
+              if (!res.ok) {
+                throw new Error(data?.error ?? "No se pudo eliminar el partido");
+              }
+
+              await fetchPartidos(true);
+              Alert.alert("Listo", "Partido eliminado correctamente.");
+            } catch (err) {
+              console.error(err);
+              const mensaje = err instanceof Error ? err.message : "No se pudo eliminar el partido";
+              Alert.alert("Error", mensaje);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const darDeBajaInscrito = async (usuarioId: number) => {
+    if (!tarjetaSeleccionada) return;
+
+    try {
+      setProcesandoUsuarioId(usuarioId);
+      const res = await fetch(`${API_URL}/tarjetas/${tarjetaSeleccionada}/desinscribir`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usuarioId }),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(data?.error ?? "No se pudo dar de baja al usuario");
+      }
+
+      setUsuariosInscritos((prev) => prev.filter((usuario) => usuario.id !== usuarioId));
+      await fetchPartidos();
+      Alert.alert("Listo", "Usuario dado de baja correctamente.");
+    } catch (err) {
+      console.error(err);
+      const mensaje = err instanceof Error ? err.message : "No se pudo dar de baja al usuario";
+      Alert.alert("Error", mensaje);
+    } finally {
+      setProcesandoUsuarioId(null);
+    }
+  };
+
+  const tarjetasFiltradas = tarjetas.filter((tarjeta) => {
+    if (!searchText.trim()) return true;
+    const busqueda = searchText.toLowerCase();
+    return (
+      (tarjeta.cancha ?? "").toLowerCase().includes(busqueda) ||
+      (tarjeta.lugar ?? "").toLowerCase().includes(busqueda)
+    );
+  });
 
   if (loading) {
     return (
@@ -97,12 +207,14 @@ export default function PartidosTab() {
           placeholder="Buscar partidos..."
           placeholderTextColor="#666"
           style={styles.searchBar}
+          value={searchText}
+          onChangeText={setSearchText}
         />
       </View>
 
       <Text style={styles.titulo}>Partidos Creados</Text>
       <FlatList
-        data={tarjetas}
+        data={tarjetasFiltradas}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <View style={styles.item}>
@@ -119,13 +231,16 @@ export default function PartidosTab() {
               }}
             />
             <View style={styles.botonesRow}>
-              <Pressable style={styles.botonDarBaja}>
-                <Text style={styles.botonTexto}>Dar de Baja</Text>
+              <Pressable
+                style={styles.botonDarBaja}
+                onPress={() => eliminarPartido(item.id)}
+              >
+                <Text style={styles.botonTexto}>Eliminar Partido</Text>
               </Pressable>
               {/* Inscribirse aquí no aplica; la inscripción se hace desde Home */}
               <Pressable
                 style={styles.botonVerInscritos}
-                onPress={() => verInscritos(item.id)}
+                onPress={() => verInscritos(item)}
               >
                 <Text style={styles.botonTexto}>Ver Inscritos</Text>
               </Pressable>
@@ -133,6 +248,9 @@ export default function PartidosTab() {
           </View>
         )}
         contentContainerStyle={styles.lista}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2e7d32" />
+        }
       />
 
       <Modal visible={modalVisible} animationType="slide" transparent>
@@ -143,9 +261,21 @@ export default function PartidosTab() {
             </Text>
             {usuariosInscritos.length > 0 ? (
               usuariosInscritos.map((usuario) => (
-                <Text key={usuario.id} style={styles.usuarioTexto}>
-                  {usuario.nombre}
-                </Text>
+                <View key={usuario.id} style={styles.usuarioRow}>
+                  <Text style={styles.usuarioTexto}>{usuario.nombre}</Text>
+                  <Pressable
+                    style={[
+                      styles.usuarioBajaButton,
+                      procesandoUsuarioId === usuario.id && styles.usuarioBajaButtonDisabled,
+                    ]}
+                    disabled={procesandoUsuarioId === usuario.id}
+                    onPress={() => darDeBajaInscrito(usuario.id)}
+                  >
+                    <Text style={styles.usuarioBajaTexto}>
+                      {procesandoUsuarioId === usuario.id ? "Procesando..." : "Dar de baja"}
+                    </Text>
+                  </Pressable>
+                </View>
               ))
             ) : (
               <Text style={{ textAlign: "center", color: "#666" }}>
@@ -245,6 +375,26 @@ const styles = StyleSheet.create({
   usuarioTexto: {
     fontSize: 16,
     marginVertical: 5,
+  },
+  usuarioRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginVertical: 6,
+  },
+  usuarioBajaButton: {
+    backgroundColor: "#c62828",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  usuarioBajaButtonDisabled: {
+    opacity: 0.6,
+  },
+  usuarioBajaTexto: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 12,
   },
   botonCerrarModal: {
     backgroundColor: "#2e7d32",

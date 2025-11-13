@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
   View
 } from "react-native";
+import { useFocusEffect } from "expo-router";
 import Tarjeta from "../../components/tarjeta"; // Asegúrate de que la ruta sea correcta
 import { API_URL } from "../../config/config";
 
@@ -30,28 +32,50 @@ type TarjetaType = {
 export default function Home() {
   const [tarjetas, setTarjetas] = useState<TarjetaType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchText, setSearchText] = useState("");
   const CURRENT_USER_ID = 1; // TODO: reemplazar con usuario autenticado
 
-  useEffect(() => {
-    fetchTarjetas();
+  const fetchTarjetas = useCallback(async (mostrarLoader = false) => {
+    try {
+      if (mostrarLoader) {
+        setLoading(true);
+      }
+
+      // Obtener tarjetas (include usuarios inscritos y jugadores faltantes)
+      const res = await fetch(`${API_URL}/tarjetas`);
+      const data = await res.json();
+
+      // Las tarjetas vienen ya formateadas desde el backend
+      setTarjetas(data);
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "No se pudieron obtener los partidos");
+    } finally {
+      if (mostrarLoader) {
+        setLoading(false);
+      }
+      setRefreshing(false);
+    }
   }, []);
 
-const fetchTarjetas = async () => {
-  try {
-    // Obtener tarjetas (include usuarios inscritos y jugadores faltantes)
-    const res = await fetch(`${API_URL}/tarjetas`);
-    const data = await res.json();
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    fetchTarjetas(true);
+  }, [fetchTarjetas]);
 
-    // Las tarjetas vienen ya formateadas desde el backend
-    setTarjetas(data);
-  } catch (err) {
-    console.error(err);
-    Alert.alert("Error", "No se pudieron obtener los partidos");
-  } finally {
-    setLoading(false);
-  }
-};
+  // Recargar datos cuando vuelves a esta pantalla
+  useFocusEffect(
+    useCallback(() => {
+      fetchTarjetas(false);
+    }, [fetchTarjetas])
+  );
+
+  // Función para pull-to-refresh
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchTarjetas(false);
+  }, [fetchTarjetas]);
 
 const inscribirse = async (tarjetaId: number) => {
   try {
@@ -140,6 +164,9 @@ const filteredTarjetas = tarjetas.filter(tarjeta =>
           />
         )}
         contentContainerStyle={styles.lista}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2e7d32" />
+        }
         ListEmptyComponent={
           <Text style={styles.emptyText}>
             {searchText ? "No se encontraron partidos" : "No hay partidos disponibles"}
