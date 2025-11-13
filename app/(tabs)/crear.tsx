@@ -2,40 +2,89 @@ import React, { useState } from "react";
 import {
   Alert,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { API_URL } from "../../config/config";
 
 export default function Formulario() {
   const [modalVisible, setModalVisible] = useState(false);
   const [cancha, setCancha] = useState("");
   const [lugar, setLugar] = useState("");
-  const [dia, setDia] = useState("");
-  const [hora, setHora] = useState("");
+  const [fecha, setFecha] = useState(new Date());
+  const [hora, setHora] = useState(new Date());
   const [jugadoresFaltantes, setJugadoresFaltantes] = useState("");
-  const [loading, setLoading] = useState(false); 
+  const [loading, setLoading] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false); 
+
+  const formatearFecha = (date: Date): string => {
+    const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", 
+                   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+    return `${dias[date.getDay()]} ${date.getDate()} de ${meses[date.getMonth()]}`;
+  };
+
+  const formatearHora = (date: Date): string => {
+    const horas = date.getHours().toString().padStart(2, "0");
+    const minutos = date.getMinutes().toString().padStart(2, "0");
+    return `${horas}:${minutos}`;
+  };
+
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === "android") {
+      setShowDatePicker(false);
+    }
+    if (event.type !== "dismissed" && selectedDate) {
+      setFecha(selectedDate);
+    }
+    if (Platform.OS === "ios") {
+      setShowDatePicker(false);
+    }
+  };
+
+  const onTimeChange = (event: any, selectedTime?: Date) => {
+    if (Platform.OS === "android") {
+      setShowTimePicker(false);
+    }
+    if (event.type !== "dismissed" && selectedTime) {
+      setHora(selectedTime);
+    }
+    if (Platform.OS === "ios") {
+      setShowTimePicker(false);
+    }
+  };
 
   const crearPartido = async () => {
-    if (!cancha || !lugar || !dia || !hora || !jugadoresFaltantes) {
+    if (!cancha || !lugar || !jugadoresFaltantes) {
       Alert.alert("Error", "Por favor completa todos los campos");
+      return;
+    }
+
+    if (!jugadoresFaltantes || parseInt(jugadoresFaltantes) <= 0) {
+      Alert.alert("Error", "Debes ingresar al menos 1 jugador faltante");
       return;
     }
 
     setLoading(true);
 
     try {
+      const diaFormateado = formatearFecha(fecha);
+      const horaFormateada = formatearHora(hora);
+
       const response = await fetch(`${API_URL}/partidos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           cancha,
           lugar,
-          dia,
-          hora,
+          dia: diaFormateado,
+          hora: horaFormateada,
           jugadoresFaltantes: parseInt(jugadoresFaltantes),
           usuarioId: 1,
         }),
@@ -49,8 +98,8 @@ export default function Formulario() {
       // Limpia formulario y cierra modal
       setCancha("");
       setLugar("");
-      setDia("");
-      setHora("");
+      setFecha(new Date());
+      setHora(new Date());
       setJugadoresFaltantes("");
       setModalVisible(false);
     } catch (err) {
@@ -59,6 +108,12 @@ export default function Formulario() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleJugadoresChange = (text: string) => {
+    // Solo permite números
+    const numericValue = text.replace(/[^0-9]/g, "");
+    setJugadoresFaltantes(numericValue);
   };
 
   return (
@@ -100,28 +155,115 @@ export default function Formulario() {
             />
 
             <Text style={styles.label}>Día</Text>
-            <TextInput
+            <Pressable
               style={styles.input}
-              placeholder="Ej: Sábado"
-              value={dia}
-              onChangeText={setDia}
-            />
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={styles.pickerText}>
+                {formatearFecha(fecha)}
+              </Text>
+            </Pressable>
+            {showDatePicker && (
+              <>
+                {Platform.OS === "ios" && (
+                  <View style={styles.iosPickerContainer}>
+                    <View style={styles.iosPickerHeader}>
+                      <Pressable onPress={() => setShowDatePicker(false)}>
+                        <Text style={styles.iosPickerButton}>Cancelar</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => {
+                          setShowDatePicker(false);
+                        }}
+                      >
+                        <Text style={[styles.iosPickerButton, styles.iosPickerButtonConfirm]}>
+                          Confirmar
+                        </Text>
+                      </Pressable>
+                    </View>
+                    <DateTimePicker
+                      value={fecha}
+                      mode="date"
+                      display="spinner"
+                      onChange={onDateChange}
+                      minimumDate={new Date()}
+                      locale="es-ES"
+                      style={styles.iosPicker}
+                    />
+                  </View>
+                )}
+                {Platform.OS === "android" && (
+                  <DateTimePicker
+                    value={fecha}
+                    mode="date"
+                    display="default"
+                    onChange={onDateChange}
+                    minimumDate={new Date()}
+                    locale="es-ES"
+                  />
+                )}
+              </>
+            )}
 
             <Text style={styles.label}>Hora</Text>
-            <TextInput
+            <Pressable
               style={styles.input}
-              placeholder="Ej: 18:00"
-              value={hora}
-              onChangeText={setHora}
-            />
+              onPress={() => setShowTimePicker(true)}
+            >
+              <Text style={styles.pickerText}>
+                {formatearHora(hora)}
+              </Text>
+            </Pressable>
+            {showTimePicker && (
+              <>
+                {Platform.OS === "ios" && (
+                  <View style={styles.iosPickerContainer}>
+                    <View style={styles.iosPickerHeader}>
+                      <Pressable onPress={() => setShowTimePicker(false)}>
+                        <Text style={styles.iosPickerButton}>Cancelar</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => {
+                          setShowTimePicker(false);
+                        }}
+                      >
+                        <Text style={[styles.iosPickerButton, styles.iosPickerButtonConfirm]}>
+                          Confirmar
+                        </Text>
+                      </Pressable>
+                    </View>
+                    <DateTimePicker
+                      value={hora}
+                      mode="time"
+                      display="spinner"
+                      onChange={onTimeChange}
+                      is24Hour={true}
+                      locale="es-ES"
+                      style={styles.iosPicker}
+                    />
+                  </View>
+                )}
+                {Platform.OS === "android" && (
+                  <DateTimePicker
+                    value={hora}
+                    mode="time"
+                    display="default"
+                    onChange={onTimeChange}
+                    is24Hour={true}
+                    locale="es-ES"
+                  />
+                )}
+              </>
+            )}
 
             <Text style={styles.label}>Jugadores faltantes</Text>
             <TextInput
               style={styles.input}
               placeholder="Ej: 2"
-              keyboardType="numeric"
+              keyboardType="number-pad"
               value={jugadoresFaltantes}
-              onChangeText={setJugadoresFaltantes}
+              onChangeText={handleJugadoresChange}
+              maxLength={2}
             />
 
             <View style={styles.botonesFila}>
@@ -233,5 +375,36 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#555",
     marginLeft: 8,
+  },
+  pickerText: {
+    fontSize: 14,
+    color: "#000",
+    paddingVertical: 2,
+  },
+  iosPickerContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    marginTop: 5,
+    marginBottom: 10,
+    overflow: "hidden",
+  },
+  iosPickerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+    backgroundColor: "#f5f5f5",
+  },
+  iosPickerButton: {
+    fontSize: 16,
+    color: "#2e7d32",
+    fontWeight: "600",
+  },
+  iosPickerButtonConfirm: {
+    color: "#2e7d32",
+  },
+  iosPicker: {
+    height: 200,
   },
 });
