@@ -1,7 +1,9 @@
-import { Link } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import { Alert, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { API_URL } from "../../config/config";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { logoutAsync } from "@/store/slices/authSlice";
 
 type Usuario = {
   id: number;
@@ -14,17 +16,21 @@ type Usuario = {
 
 type Partido = {
   id: number;
-  fecha: string;
-  ubicacion: string;
-  resultado?: string;
+  cancha: string;
+  lugar: string;
+  dia: string;
+  hora: string;
+  jugadoresFaltantes: number;
+  usuarioId: number;
 };
 
 type TarjetaInscrita = {
   id: number;
-  nombre: string;
-  direccion: string;
-  fecha: string;
-  tarjetaId: number;
+  cancha: string;
+  lugar: string;
+  dia: string;
+  hora: string;
+  jugadoresFaltantes: number;
 };
 
 type Preferencias = {
@@ -34,7 +40,6 @@ type Preferencias = {
 };
 
 export default function PerfilUsuario() {
-  const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [modalPref, setModalPref] = useState(false);
   const [modalHistorial, setModalHistorial] = useState(false);
   const [historialPartidos, setHistorialPartidos] = useState<Partido[]>([]);
@@ -45,31 +50,139 @@ export default function PerfilUsuario() {
     barriosPreferidos: ""
   });
   const [loading, setLoading] = useState(true);
+  
+  const dispatch = useAppDispatch();
+  const { usuario: usuarioRedux, isAuthenticated } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
-    cargarDatosUsuario();
-  }, []);
+    if (!isAuthenticated || !usuarioRedux) {
+      router.replace("/login");
+      return;
+    }
+  }, [isAuthenticated, usuarioRedux, router]);
+
+  useEffect(() => {
+    if (usuarioRedux) {
+      cargarDatosUsuario();
+    }
+  }, [usuarioRedux]);
+
+  // Recargar datos cuando vuelves a esta pantalla
+  useFocusEffect(
+    useCallback(() => {
+      if (usuarioRedux) {
+        cargarDatosUsuario();
+      }
+    }, [usuarioRedux])
+  );
+
+  const esFechaPasada = (dia: string, hora: string): boolean => {
+    try {
+      // Parsear la fecha en formato "Lunes 15 de enero" y hora "10:37"
+      const meses: { [key: string]: number } = {
+        "enero": 0, "febrero": 1, "marzo": 2, "abril": 3, "mayo": 4, "junio": 5,
+        "julio": 6, "agosto": 7, "septiembre": 8, "octubre": 9, "noviembre": 10, "diciembre": 11
+      };
+
+      // Extraer día y mes de la fecha (ej: "Lunes 15 de enero" -> día: 15, mes: "enero")
+      const diaLower = dia.toLowerCase().trim();
+      const partesDia = diaLower.split(" de ");
+      
+      if (partesDia.length < 2) {
+        console.log("Error: formato de fecha inválido:", dia);
+        return false;
+      }
+      
+      const numeroDia = parseInt(partesDia[0].match(/\d+/)?.[0] || "0");
+      const mesTexto = partesDia[1].trim();
+      const mes = meses[mesTexto];
+      
+      if (isNaN(numeroDia) || mes === undefined) {
+        console.log("Error: no se pudo parsear día o mes", { numeroDia, mesTexto, mes });
+        return false;
+      }
+
+      // Extraer hora y minutos (ej: "10:37" -> hora: 10, minutos: 37)
+      const [horaStr, minutosStr] = hora.split(":");
+      const horaNum = parseInt(horaStr || "0");
+      const minutosNum = parseInt(minutosStr || "0");
+
+      if (isNaN(horaNum) || isNaN(minutosNum)) {
+        console.log("Error: no se pudo parsear hora", { hora, horaStr, minutosStr });
+        return false;
+      }
+
+      // Crear fecha del partido
+      const ahora = new Date();
+      let fechaPartido = new Date(ahora.getFullYear(), mes, numeroDia, horaNum, minutosNum);
+      
+      // Si el mes del partido es menor al mes actual, asumimos que es del próximo año
+      // Si es el mismo mes pero el día ya pasó, comparamos con el año actual
+      // Si el día es hoy o futuro, comparamos normalmente
+      if (mes < ahora.getMonth()) {
+        // El mes del partido ya pasó este año, debe ser del próximo año
+        fechaPartido.setFullYear(ahora.getFullYear() + 1);
+      } else if (mes === ahora.getMonth()) {
+        // Mismo mes: si el día ya pasó este mes, comparamos normalmente
+        // Si el día es hoy, comparamos solo la hora
+        if (numeroDia < ahora.getDate()) {
+          // El día ya pasó este mes, comparamos normalmente
+        } else if (numeroDia === ahora.getDate()) {
+          // Es hoy, comparamos solo la hora
+          fechaPartido.setFullYear(ahora.getFullYear());
+          fechaPartido.setMonth(ahora.getMonth());
+          fechaPartido.setDate(ahora.getDate());
+        } else {
+          // El día aún no ha llegado este mes
+          fechaPartido.setFullYear(ahora.getFullYear());
+        }
+      } else {
+        // El mes del partido es futuro este año
+        fechaPartido.setFullYear(ahora.getFullYear());
+      }
+
+      const esPasado = fechaPartido < ahora;
+      console.log("Comparación de fecha:", {
+        dia,
+        hora,
+        fechaPartido: fechaPartido.toLocaleString(),
+        ahora: ahora.toLocaleString(),
+        esPasado
+      });
+      
+      return esPasado;
+    } catch (error) {
+      console.error("Error al parsear fecha:", error, { dia, hora });
+      return false;
+    }
+  };
 
   const cargarDatosUsuario = async () => {
+    if (!usuarioRedux) return;
+    
     try {
-      const userId = 1;
-
-      const userResponse = await fetch(`${API_URL}/usuario/${userId}`);
+      const userResponse = await fetch(`${API_URL}/usuario/${usuarioRedux.id}`);
       const userData = await userResponse.json();
-      setUsuario(userData);
       setPreferencias({
         diasDisponibles: userData.diasDisponibles || "",
         horariosDisponibles: userData.horariosDisponibles || "",
         barriosPreferidos: userData.barriosPreferidos || ""
       });
 
-      const partidosResponse = await fetch(`${API_URL}/usuario/${userId}/partidos`);
-      const partidosData = await partidosResponse.json();
-      setHistorialPartidos(partidosData);
-
-      const tarjetasResponse = await fetch(`${API_URL}/usuario/${userId}/tarjetas-inscritas`);
+      // Obtener partidos inscritos (tarjetas inscritas)
+      const tarjetasResponse = await fetch(`${API_URL}/usuario/${usuarioRedux.id}/tarjetas-inscritas`);
       const tarjetasData = await tarjetasResponse.json();
-      setTarjetasInscritas(tarjetasData);
+      
+      // Separar entre partidos jugados (fecha pasada) y partidos futuros (fecha futura)
+      const partidosJugados = tarjetasData.filter((partido: TarjetaInscrita) => 
+        esFechaPasada(partido.dia, partido.hora)
+      );
+      const partidosFuturos = tarjetasData.filter((partido: TarjetaInscrita) => 
+        !esFechaPasada(partido.dia, partido.hora)
+      );
+
+      setHistorialPartidos(partidosJugados);
+      setTarjetasInscritas(partidosFuturos);
 
     } catch (error) {
       console.error("Error al cargar datos:", error);
@@ -80,8 +193,10 @@ export default function PerfilUsuario() {
   };
 
   const guardarPreferencias = async () => {
+    if (!usuarioRedux) return;
+    
     try {
-      const response = await fetch(`${API_URL}/usuario/1/preferencias`, {
+      const response = await fetch(`${API_URL}/usuario/${usuarioRedux.id}/preferencias`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -102,6 +217,24 @@ export default function PerfilUsuario() {
     }
   };
 
+  const handleLogout = async () => {
+    Alert.alert(
+      "Cerrar sesión",
+      "¿Estás seguro de que deseas cerrar sesión?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Cerrar sesión",
+          style: "destructive",
+          onPress: async () => {
+            await dispatch(logoutAsync());
+            router.replace("/login");
+          },
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -110,7 +243,7 @@ export default function PerfilUsuario() {
     );
   }
 
-  if (!usuario) {
+  if (!usuarioRedux || !isAuthenticated) {
     return (
       <View style={styles.container}>
         <Text>Error al cargar el usuario</Text>
@@ -126,26 +259,24 @@ export default function PerfilUsuario() {
 
       <View style={styles.contenido}>
         <Text style={styles.titulo}>Perfil del Usuario</Text>
-        <Text style={styles.dato}>Nombre: {usuario.nombre}</Text>
-        <Text style={styles.dato}>Email: {usuario.correo}</Text>
+        <Text style={styles.dato}>Nombre: {usuarioRedux.nombre}</Text>
+        <Text style={styles.dato}>Email: {usuarioRedux.correo}</Text>
 
         <Pressable style={styles.boton} onPress={() => setModalPref(true)}>
           <Text style={styles.botonTexto}>
-            {usuario.diasDisponibles ? "Editar Preferencias" : "Agregar Preferencias"}
+            {usuarioRedux.diasDisponibles ? "Editar Preferencias" : "Agregar Preferencias"}
           </Text>
         </Pressable>
 
         <Pressable style={styles.boton} onPress={() => setModalHistorial(true)}>
           <Text style={styles.botonTexto}>
-            Historial ({historialPartidos.length + tarjetasInscritas.length})
+            Mis Partidos ({historialPartidos.length + tarjetasInscritas.length})
           </Text>
         </Pressable>
 
-        <Link href="/login" replace asChild>
-          <Pressable style={styles.botonCerrar}>
-            <Text style={styles.botonTexto}>Cerrar Sesión</Text>
-          </Pressable>
-        </Link>
+        <Pressable style={styles.botonCerrar} onPress={handleLogout}>
+          <Text style={styles.botonTexto}>Cerrar Sesión</Text>
+        </Pressable>
       </View>
 
       <Modal visible={modalPref} animationType="slide" transparent>
@@ -191,37 +322,41 @@ export default function PerfilUsuario() {
       <Modal visible={modalHistorial} animationType="slide" transparent>
         <View style={styles.modalFondo}>
           <View style={styles.modalContenido}>
-            <Text style={styles.tituloModal}>Historial</Text>
+            <Text style={styles.tituloModal}>Mis Partidos</Text>
 
             <Text style={styles.subtitulo}>Partidos Jugados</Text>
             {historialPartidos.length === 0 ? (
-              <Text style={styles.sinHistorial}>No hay partidos en el historial</Text>
+              <Text style={styles.sinHistorial}>No has participado en partidos aún</Text>
             ) : (
               <FlatList
                 data={historialPartidos}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                   <View style={styles.item}>
-                    <Text style={styles.partidoInfo}>Fecha: {new Date(item.fecha).toLocaleDateString()}</Text>
-                    <Text style={styles.partidoInfo}>Ubicación: {item.ubicacion}</Text>
-                    {item.resultado && <Text style={styles.partidoInfo}>Resultado: {item.resultado}</Text>}
+                    <Text style={styles.partidoTitulo}>{item.cancha}</Text>
+                    <Text style={styles.partidoInfo}>📍 Ubicación: {item.lugar}</Text>
+                    <Text style={styles.partidoInfo}>📅 Fecha: {item.dia}</Text>
+                    <Text style={styles.partidoInfo}>🕐 Hora: {item.hora}</Text>
+                    <Text style={styles.partidoInfo}>👥 Jugadores faltantes: {item.jugadoresFaltantes}</Text>
                   </View>
                 )}
               />
             )}
 
-            <Text style={styles.subtitulo}>Tarjetas Inscritas</Text>
+            <Text style={styles.subtitulo}>Partidos Futuros</Text>
             {tarjetasInscritas.length === 0 ? (
-              <Text style={styles.sinHistorial}>No hay tarjetas inscritas</Text>
+              <Text style={styles.sinHistorial}>No hay partidos futuros inscritos</Text>
             ) : (
               <FlatList
                 data={tarjetasInscritas}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                   <View style={styles.item}>
-                    <Text style={styles.partidoInfo}>Cancha: {item.nombre}</Text>
-                    <Text style={styles.partidoInfo}>Dirección: {item.direccion}</Text>
-                    <Text style={styles.partidoInfo}>Fecha: {item.fecha}</Text>
+                    <Text style={styles.partidoTitulo}>{item.cancha}</Text>
+                    <Text style={styles.partidoInfo}>📍 Ubicación: {item.lugar}</Text>
+                    <Text style={styles.partidoInfo}>📅 Fecha: {item.dia}</Text>
+                    <Text style={styles.partidoInfo}>🕐 Hora: {item.hora}</Text>
+                    <Text style={styles.partidoInfo}>👥 Jugadores faltantes: {item.jugadoresFaltantes}</Text>
                   </View>
                 )}
               />
@@ -280,8 +415,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 15,
     padding: 20,
-    width: "85%",
-    maxHeight: "80%",
+    width: "90%",
+    maxHeight: "85%",
   },
   tituloModal: { 
     fontSize: 18, 
@@ -306,14 +441,22 @@ const styles = StyleSheet.create({
   },
   item: { 
     marginBottom: 15,
-    padding: 10,
+    padding: 12,
     backgroundColor: "#f9f9f9",
     borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: "#2e7d32",
+  },
+  partidoTitulo: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#2e7d32",
+    marginBottom: 6,
   },
   partidoInfo: {
     fontSize: 14,
-    marginVertical: 2,
-    color: "#333",
+    marginVertical: 3,
+    color: "#555",
   },
   botonesModal: {
     flexDirection: "row",

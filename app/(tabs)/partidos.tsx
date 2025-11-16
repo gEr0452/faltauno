@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Modal, Pressable, RefreshControl, StyleSheet, Text, TextInput, View, } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import Partidos from "../../components/partidos";
 import { API_URL } from "../../config/config";
+import { useAppSelector } from "@/store/hooks";
 
 type UsuarioInscrito = {
   id: number;
@@ -31,14 +32,25 @@ export default function PartidosTab() {
   const [tarjetaSeleccionada, setTarjetaSeleccionada] = useState<number | null>(null);
   const [procesandoUsuarioId, setProcesandoUsuarioId] = useState<number | null>(null);
   const [searchText, setSearchText] = useState("");
+  const router = useRouter();
+  const { usuario, isAuthenticated } = useAppSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (!isAuthenticated || !usuario) {
+      router.replace("/login");
+    }
+  }, [isAuthenticated, usuario, router]);
 
   const fetchPartidos = useCallback(async (mostrarLoader = false) => {
+    if (!usuario) return;
+    
     try {
       if (mostrarLoader) {
         setLoading(true);
       }
 
-      const res = await fetch(`${API_URL}/partidos`);
+      // Obtener solo los partidos creados por el usuario autenticado
+      const res = await fetch(`${API_URL}/usuario/${usuario.id}/partidos`);
       if (!res.ok) {
         throw new Error("No se pudieron obtener los partidos");
       }
@@ -72,11 +84,13 @@ export default function PartidosTab() {
       }
       setRefreshing(false);
     }
-  }, []);
+  }, [usuario]);
 
   useEffect(() => {
-    fetchPartidos(true);
-  }, [fetchPartidos]);
+    if (usuario) {
+      fetchPartidos(true);
+    }
+  }, [fetchPartidos, usuario]);
 
   // Recargar datos cuando vuelves a esta pantalla
   useFocusEffect(

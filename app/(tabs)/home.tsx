@@ -9,9 +9,10 @@ import {
   TextInput,
   View
 } from "react-native";
-import { useFocusEffect } from "expo-router";
-import Tarjeta from "../../components/tarjeta"; // Asegúrate de que la ruta sea correcta
+import { useFocusEffect, useRouter } from "expo-router";
+import Tarjeta from "../../components/tarjeta";
 import { API_URL } from "../../config/config";
+import { useAppSelector } from "@/store/hooks";
 
 type UsuarioInscrito = {
   id: number;
@@ -34,7 +35,14 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const CURRENT_USER_ID = 1; // TODO: reemplazar con usuario autenticado
+  const router = useRouter();
+  const { usuario, isAuthenticated } = useAppSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (!isAuthenticated || !usuario) {
+      router.replace("/login");
+    }
+  }, [isAuthenticated, usuario, router]);
 
   const fetchTarjetas = useCallback(async (mostrarLoader = false) => {
     try {
@@ -78,12 +86,13 @@ export default function Home() {
   }, [fetchTarjetas]);
 
 const inscribirse = async (tarjetaId: number) => {
+  if (!usuario) return;
+  
   try {
-    // TODO: usar el usuario autenticado en vez de id 1
     const res = await fetch(`${API_URL}/tarjetas/${tarjetaId}/inscribir`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ usuarioId: CURRENT_USER_ID }),
+      body: JSON.stringify({ usuarioId: usuario.id }),
     });
 
     const data = await res.json().catch(() => null);
@@ -103,11 +112,13 @@ const inscribirse = async (tarjetaId: number) => {
 };
 
 const darseDeBaja = async (tarjetaId: number) => {
+  if (!usuario) return;
+  
   try {
     const res = await fetch(`${API_URL}/tarjetas/${tarjetaId}/desinscribir`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ usuarioId: CURRENT_USER_ID }),
+      body: JSON.stringify({ usuarioId: usuario.id }),
     });
 
     const data = await res.json().catch(() => null);
@@ -160,7 +171,7 @@ const filteredTarjetas = tarjetas.filter(tarjeta =>
             item={item}
             onInscribirse={inscribirse}
             onDarseDeBaja={darseDeBaja}
-            currentUserId={CURRENT_USER_ID}
+            currentUserId={usuario?.id}
           />
         )}
         contentContainerStyle={styles.lista}

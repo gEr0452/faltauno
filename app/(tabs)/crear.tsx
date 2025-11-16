@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Alert,
   Modal,
@@ -9,8 +9,10 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { API_URL } from "../../config/config";
+import { useAppSelector } from "@/store/hooks";
 
 export default function Formulario() {
   const [modalVisible, setModalVisible] = useState(false);
@@ -21,7 +23,15 @@ export default function Formulario() {
   const [jugadoresFaltantes, setJugadoresFaltantes] = useState("");
   const [loading, setLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false); 
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const router = useRouter();
+  const { usuario, isAuthenticated } = useAppSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (!isAuthenticated || !usuario) {
+      router.replace("/login");
+    }
+  }, [isAuthenticated, usuario, router]); 
 
   const formatearFecha = (date: Date): string => {
     const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -86,7 +96,7 @@ export default function Formulario() {
           dia: diaFormateado,
           hora: horaFormateada,
           jugadoresFaltantes: parseInt(jugadoresFaltantes),
-          usuarioId: 1,
+          usuarioId: usuario?.id,
         }),
       });
 

@@ -1,7 +1,26 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
+import { useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { loadUserAsync } from "@/store/slices/authSlice";
 
 export default function Layout() {
+  const dispatch = useAppDispatch();
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Cargar usuario guardado al iniciar
+    dispatch(loadUserAsync());
+  }, [dispatch]);
+
+  useEffect(() => {
+    // Redirigir al login si no está autenticado
+    if (!isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [isAuthenticated, router]);
+
   return (
     <Tabs
       screenOptions={{
