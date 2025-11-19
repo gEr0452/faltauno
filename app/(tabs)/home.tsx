@@ -27,6 +27,7 @@ type TarjetaType = {
   fecha: string;
   image?: string;
   usuario: string;
+  usuarioId: number;
   inscritos?: UsuarioInscrito[];
 };
 
@@ -88,6 +89,13 @@ export default function Home() {
 const inscribirse = async (tarjetaId: number) => {
   if (!usuario) return;
   
+  // Verificar que el usuario no sea el creador del partido
+  const tarjeta = tarjetas.find(t => t.id === tarjetaId);
+  if (tarjeta && tarjeta.usuarioId === usuario.id) {
+    // No mostrar error, simplemente no permitir la inscripción
+    return;
+  }
+  
   try {
     const res = await fetch(`${API_URL}/tarjetas/${tarjetaId}/inscribir`, {
       method: "POST",
@@ -98,6 +106,10 @@ const inscribirse = async (tarjetaId: number) => {
     const data = await res.json().catch(() => null);
 
     if (!res.ok) {
+      // Si el error es porque es el creador, no mostrar error
+      if (data?.error && data.error.includes("creaste")) {
+        return;
+      }
       throw new Error(data?.error ?? "Error al inscribirse al partido");
     }
 
@@ -105,6 +117,10 @@ const inscribirse = async (tarjetaId: number) => {
     await fetchTarjetas();
     Alert.alert("¡Listo!", "Te has inscrito al partido.");
   } catch (err) {
+    // Si el error es porque es el creador, no mostrar error
+    if (err instanceof Error && err.message.includes("creaste")) {
+      return;
+    }
     console.error(err);
     const mensaje = err instanceof Error ? err.message : "No se pudo inscribir al usuario";
     Alert.alert("Error", mensaje);

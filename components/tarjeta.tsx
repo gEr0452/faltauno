@@ -16,6 +16,7 @@ export type TarjetaType = {
   fecha: string;
   image?: string;
   usuario: string;
+  usuarioId: number;
   inscritos?: { id: number; nombre: string }[];
 };
 
@@ -29,6 +30,7 @@ type Props = {
 export default function Tarjeta({ item, onInscribirse, onDarseDeBaja, currentUserId }: Props) {
   const [modalVisible, setModalVisible] = useState(false);
   const estaInscrito = currentUserId != null && item.inscritos?.some((usuario) => usuario.id === currentUserId);
+  const esCreador = currentUserId != null && item.usuarioId === currentUserId;
   const hayCupo = item.jugadores > 0;
 
   return (
@@ -75,8 +77,13 @@ export default function Tarjeta({ item, onInscribirse, onDarseDeBaja, currentUse
             <Text>Fecha: {item.fecha}</Text>
             <Text>Creado por: {item.usuario}</Text>
             {estaInscrito && <Text style={styles.inscriptoModal}>Ya estás inscripto a este partido</Text>}
+            {esCreador && <Text style={styles.inscriptoModal}>Tú creaste este partido</Text>}
 
-            {estaInscrito ? (
+            {esCreador ? (
+              <View style={styles.disabledButton}>
+                <Text style={{ color: "#fff", fontWeight: "bold" }}>Partido creado por ti</Text>
+              </View>
+            ) : estaInscrito ? (
               <Pressable
                 style={[styles.closeButton, { backgroundColor: "#c62828" }]}
                 onPress={async () => {
@@ -88,11 +95,11 @@ export default function Tarjeta({ item, onInscribirse, onDarseDeBaja, currentUse
               >
                 <Text style={{ color: "#fff", fontWeight: "bold" }}>Darse de baja</Text>
               </Pressable>
-            ) : hayCupo ? (
+            ) : hayCupo && !esCreador ? (
               <Pressable
                 style={styles.closeButton}
                 onPress={async () => {
-                  if (onInscribirse) {
+                  if (onInscribirse && !esCreador) {
                     await onInscribirse(item.id);
                   }
                   setModalVisible(false);

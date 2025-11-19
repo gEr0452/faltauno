@@ -262,12 +262,6 @@ export default function PerfilUsuario() {
         <Text style={styles.dato}>Nombre: {usuarioRedux.nombre}</Text>
         <Text style={styles.dato}>Email: {usuarioRedux.correo}</Text>
 
-        <Pressable style={styles.boton} onPress={() => setModalPref(true)}>
-          <Text style={styles.botonTexto}>
-            {usuarioRedux.diasDisponibles ? "Editar Preferencias" : "Agregar Preferencias"}
-          </Text>
-        </Pressable>
-
         <Pressable style={styles.boton} onPress={() => setModalHistorial(true)}>
           <Text style={styles.botonTexto}>
             Mis Partidos ({historialPartidos.length + tarjetasInscritas.length})
